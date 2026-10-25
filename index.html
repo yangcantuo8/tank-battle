@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML 坦克大战</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #111;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px;
+            color: #fff;
+            font-family: sans-serif;
+        }
+        canvas {
+            border: 3px solid #444;
+            background: #000;
+        }
+        .tip {
+            margin-top: 12px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="500" height="400"></canvas>
+    <div class="tip">W A S D：移动坦克｜空格：发射子弹</div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // 玩家坦克
+        const player = {
+            x: 230,
+            y: 350,
+            w: 40,
+            h: 40,
+            speed: 4,
+            dir: "up"
+        };
+
+        let bullets = [];
+        let enemies = [
+            { x: 50, y: 30, w: 40, h: 40, speed: 2, dir: "down" },
+            { x: 220, y: 30, w: 40, h: 40, speed: 2, dir: "down" },
+            { x: 410, y: 30, w: 40, h: 40, speed: 2, dir: "down" }
+        ];
+
+        const keys = {};
+
+        document.addEventListener("keydown", (e) => {
+            keys[e.code] = true;
+            if (e.code === "Space") {
+                fireBullet();
+            }
+        });
+        document.addEventListener("keyup", (e) => {
+            keys[e.code] = false;
+        });
+
+        function fireBullet() {
+            let bx, by;
+            switch (player.dir) {
+                case "up":
+                    bx = player.x + player.w / 2 - 3;
+                    by = player.y - 10;
+                    break;
+                case "down":
+                    bx = player.x + player.w / 2 - 3;
+                    by = player.y + player.h;
+                    break;
+                case "left":
+                    bx = player.x - 10;
+                    by = player.y + player.h / 2 - 3;
+                    break;
+                case "right":
+                    bx = player.x + player.w;
+                    by = player.y + player.h / 2 - 3;
+                    break;
+            }
+            bullets.push({
+                x: bx,
+                y: by,
+                w: 6,
+                h: 6,
+                speed: 7,
+                dir: player.dir
+            });
+        }
+
+        function update() {
+            // 玩家移动
+            if (keys["KeyW"]) {
+                player.y -= player.speed;
+                player.dir = "up";
+            }
+            if (keys["KeyS"]) {
+                player.y += player.speed;
+                player.dir = "down";
+            }
+            if (keys["KeyA"]) {
+                player.x -= player.speed;
+                player.dir = "left";
+            }
+            if (keys["KeyD"]) {
+                player.x += player.speed;
+                player.dir = "right";
+            }
+
+            // 边界限制
+            player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+            player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
+
+            // 更新子弹
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                switch (b.dir) {
+                    case "up": b.y -= b.speed; break;
+                    case "down": b.y += b.speed; break;
+                    case "left": b.x -= b.speed; break;
+                    case "right": b.x += b.speed; break;
+                }
+                if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+                    bullets.splice(i, 1);
+                }
+            }
+
+            // 更新敌人
+            enemies.forEach(enemy => {
+                enemy.y += enemy.speed;
+                if (enemy.y > canvas.height) {
+                    enemy.y = 0;
+                    enemy.x = Math.random() * (canvas.width - enemy.w);
+                }
+            });
+
+            // 碰撞检测：子弹击中敌方坦克
+            for (let bi = bullets.length - 1; bi >= 0; bi--) {
+                const b = bullets[bi];
+                for (let ei = enemies.length - 1; ei >= 0; ei--) {
+                    const e = enemies[ei];
+                    if (b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) {
+                        bullets.splice(bi, 1);
+                        enemies.splice(ei, 1);
+                        break;
+                    }
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制玩家坦克（绿色）
+            ctx.fillStyle = "#39b54a";
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+
+            // 绘制敌方坦克（红色）
+            ctx.fillStyle = "#e63946";
+            enemies.forEach(e => {
+                ctx.fillRect(e.x, e.y, e.w, e.h);
+            });
+
+            // 绘制子弹（白色）
+            ctx.fillStyle = "#ffffff";
+            bullets.forEach(b => {
+                ctx.fillRect(b.x, b.y, b.w, b.h);
+            });
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
